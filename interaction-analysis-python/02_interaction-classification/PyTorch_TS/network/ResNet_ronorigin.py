@@ -111,7 +111,10 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
 
         self.avgpool = nn.AvgPool2d(8)
-        self.fc1 = nn.Linear(512 * block.expansion, 256 * block.expansion)
+        
+        # after concatenation, 512 + 512 = 1024 as the input in fc layer
+        
+        self.fc1 = nn.Linear(1024 * block.expansion, 256 * block.expansion)
         self.drop = nn.Dropout(p=0.5)
         self.fc2 = nn.Linear(256 * block.expansion, num_classes)
         self.fc3 = nn.Linear(128 * block.expansion, num_classes)
@@ -147,14 +150,18 @@ class ResNet(nn.Module):
         
         return output
         
-    def forward(self, x):
-        output = self.forward_4_cat(x)
-#         out1 = self.forward_4_cat(x1)
-#         out2 = self.forward_4_cat(x2)
+    def forward(self, x1,x2):
         
-#         out = torch.cat((out1, out2), 1)
+        # input 2 inputs and concatenate them into one and fully connect them
+#         output = self.forward_4_cat(x)
+#         print(output.shape)
+
+        out1 = self.forward_4_cat(x1)
+        out2 = self.forward_4_cat(x2)
         
-        print(output.shape)
+        output = torch.cat((out1, out2), 1)
+        
+
         output = self.fc1(output)
         output = self.drop(output)
         output = self.fc2(output)
@@ -163,22 +170,9 @@ class ResNet(nn.Module):
     
     
 
-    def get_feature(self, x):
-        output = self.Conv1(x)
-        output = F.relu(self.BN1(output))
-
-        output = self.layer1(output)
-        output = self.layer2(output)
-        output = self.layer3(output)
-        output = self.layer4(output)
-
-        output = self.avgpool(output)
-        output = output.view(x.size(0), -1)
-        output = self.fc1(output)
-        output = self.drop(output)
-        output = self.fc2(output)
+    def get_feature(self, x1,x2):
         
-        return output
+        return self.forward(x1,x2)
 
 
 def resnet_18():
