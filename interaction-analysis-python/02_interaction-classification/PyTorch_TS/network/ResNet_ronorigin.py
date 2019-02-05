@@ -132,8 +132,8 @@ class ResNet(nn.Module):
             layers.append(block(self.in_planes, out_planes))
             self.in_planes = out_planes * block.expansion
         return nn.Sequential(*layers)
-
-    def forward(self, x):
+    
+    def forward_4_cat(self,x):
         output = self.Conv1(x)
         output = F.relu(self.BN1(output))
 
@@ -144,13 +144,24 @@ class ResNet(nn.Module):
 
         output = self.avgpool(output)
         output = output.view(x.size(0), -1)
+        
+        return output
+        
+    def forward(self, x):
+        output = self.forward_4_cat(x)
+#         out1 = self.forward_4_cat(x1)
+#         out2 = self.forward_4_cat(x2)
+        
+#         out = torch.cat((out1, out2), 1)
+        
+        print(output.shape)
         output = self.fc1(output)
         output = self.drop(output)
         output = self.fc2(output)
-        # output = self.drop(output)
-        # output = self.fc3(output)
 
         return output
+    
+    
 
     def get_feature(self, x):
         output = self.Conv1(x)
