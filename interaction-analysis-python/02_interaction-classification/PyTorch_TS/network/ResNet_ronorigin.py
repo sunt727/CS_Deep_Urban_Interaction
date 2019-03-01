@@ -112,9 +112,10 @@ class ResNet(nn.Module):
 
         self.avgpool = nn.AvgPool2d(8)
         
-        # after concatenation, 512 + 512 = 1024 as the input in fc layer
+        # after concatenation, 512 + 512 + 512 = 1536 as the input in fc layer
+        # print shape
         
-        self.fc1 = nn.Linear(1024 * block.expansion, 256 * block.expansion)
+        self.fc1 = nn.Linear(1536 * block.expansion, 256 * block.expansion)
         self.drop = nn.Dropout(p=0.5)
         self.fc2 = nn.Linear(256 * block.expansion, num_classes)
         self.fc3 = nn.Linear(128 * block.expansion, num_classes)
@@ -136,21 +137,22 @@ class ResNet(nn.Module):
             self.in_planes = out_planes * block.expansion
         return nn.Sequential(*layers)
     
+    # helper
     def forward_4_cat(self,x):
         output = self.Conv1(x)
         output = F.relu(self.BN1(output))
 
-        output = self.layer1(output)
+        output = self.layer1(output) # conv2d #2 conv2d + conv2d + maxpool2d
         output = self.layer2(output)
-        output = self.layer3(output)
+        output = self.layer3(output) #  conv2d #3 conv2d + conv2d + conv2d + maxpool2d
         output = self.layer4(output)
 
         output = self.avgpool(output)
-        output = output.view(x.size(0), -1)
+        output = output.view(x.size(0), -1) #1 x 100000
         
         return output
         
-    def forward(self, x1,x2):
+    def forward(self, x1,x2,x3):
         
         # input 2 inputs and concatenate them into one and fully connect them
 #         output = self.forward_4_cat(x)
@@ -158,10 +160,12 @@ class ResNet(nn.Module):
 
         out1 = self.forward_4_cat(x1)
         out2 = self.forward_4_cat(x2)
+        out3 = self.forward_4_cat(x3)
         
-        output = torch.cat((out1, out2), 1)
+        # concatenate 1 x 512 + 1 x 512 + 1 x 512 = 1 x 1536
+        output = torch.cat((out1, out2, out3), 1)
         
-
+        # fc = fully connection
         output = self.fc1(output)
         output = self.drop(output)
         output = self.fc2(output)
@@ -175,8 +179,8 @@ class ResNet(nn.Module):
         return self.forward(x1,x2)
 
 
-def resnet_18():
-    model = ResNet(BasicBlock, [2, 2, 2, 2])
+def resnet_18(nc=100):
+    model = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=nc)
     
     return model
 
